@@ -1,6 +1,7 @@
 import pygame
 from .snake import Snake
 from .food import Food
+from .sounds import SoundManager
 
 # Game Engine
 
@@ -29,6 +30,7 @@ class GameEngine:
         self.small_font = pygame.font.SysFont("Arial", 26)
 
         self.moves_per_second = 8
+        self.sounds = SoundManager()
         self._new_game()
 
     def _new_game(self):
@@ -46,6 +48,7 @@ class GameEngine:
     def _end_game(self):
         self.game_over = True
         self.game_over_time = pygame.time.get_ticks()
+        self.sounds.play_game_over()
 
     def handle_keydown(self, key):
         if self.game_over:
@@ -97,6 +100,7 @@ class GameEngine:
         if self.snake.head_rect().colliderect(self.food.rect()):
             self.snake.grow()
             self.score += 1
+            self.sounds.play_eat()
             self.food.respawn(self.snake.body)
 
     def _draw_text(self, screen, text, font, color, y):
