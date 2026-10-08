@@ -18,6 +18,8 @@ class GameEngine:
 
         self.snake = Snake(self.grid_width // 2, self.grid_height // 2, self.cell_size)
         self.food = Food(self.grid_width, self.grid_height, self.cell_size)
+        # Make sure the first food never spawns on top of the snake.
+        self.food.respawn(self.snake.body)
 
         self.score = 0
         self.font = pygame.font.SysFont("Arial", 30)
