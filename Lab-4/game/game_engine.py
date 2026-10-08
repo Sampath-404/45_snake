@@ -9,6 +9,13 @@ GREEN = (0, 200, 0)
 RED = (220, 60, 60)
 GRAY = (180, 180, 180)
 
+# key -> (name, moves per second)
+DIFFICULTIES = {
+    pygame.K_1: ("Easy", 6),
+    pygame.K_2: ("Medium", 10),
+    pygame.K_3: ("Hard", 15),
+}
+
 class GameEngine:
     def __init__(self, width, height):
         self.width = width
@@ -17,19 +24,22 @@ class GameEngine:
         self.grid_width = width // self.cell_size
         self.grid_height = height // self.cell_size
 
+        self.font = pygame.font.SysFont("Arial", 30)
+        self.big_font = pygame.font.SysFont("Arial", 64, bold=True)
+        self.small_font = pygame.font.SysFont("Arial", 26)
+
+        self.moves_per_second = 8
+        self._new_game()
+
+    def _new_game(self):
+        """Reset everything for a fresh round (speed is kept)."""
         self.snake = Snake(self.grid_width // 2, self.grid_height // 2, self.cell_size)
         self.food = Food(self.grid_width, self.grid_height, self.cell_size)
         # Make sure the first food never spawns on top of the snake.
         self.food.respawn(self.snake.body)
 
         self.score = 0
-        self.font = pygame.font.SysFont("Arial", 30)
-        self.big_font = pygame.font.SysFont("Arial", 64, bold=True)
-        self.small_font = pygame.font.SysFont("Arial", 26)
-
-        self.moves_per_second = 8
         self._frame_counter = 0
-
         self.game_over = False
         self.game_over_time = 0
 
@@ -39,8 +49,14 @@ class GameEngine:
 
     def handle_keydown(self, key):
         if self.game_over:
-            # Short delay so a key pressed just before dying doesn't skip the screen.
-            if pygame.time.get_ticks() - self.game_over_time > 700:
+            # Short delay so keys pressed just before dying don't pick an option.
+            if pygame.time.get_ticks() - self.game_over_time < 700:
+                return
+            if key in DIFFICULTIES:
+                _, speed = DIFFICULTIES[key]
+                self.moves_per_second = speed
+                self._new_game()
+            elif key in (pygame.K_q, pygame.K_ESCAPE):
                 pygame.event.post(pygame.event.Event(pygame.QUIT))
             return
 
@@ -93,9 +109,14 @@ class GameEngine:
         overlay.fill((0, 0, 0, 180))
         screen.blit(overlay, (0, 0))
 
-        self._draw_text(screen, "GAME OVER", self.big_font, RED, self.height // 2 - 70)
-        self._draw_text(screen, f"Final Score: {self.score}", self.font, WHITE, self.height // 2)
-        self._draw_text(screen, "Press any key to exit", self.small_font, GRAY, self.height // 2 + 60)
+        mid = self.height // 2
+        self._draw_text(screen, "GAME OVER", self.big_font, RED, mid - 120)
+        self._draw_text(screen, f"Final Score: {self.score}", self.font, WHITE, mid - 55)
+        self._draw_text(screen, "Play again:", self.small_font, GRAY, mid)
+        self._draw_text(screen, "1 - Easy", self.small_font, WHITE, mid + 40)
+        self._draw_text(screen, "2 - Medium", self.small_font, WHITE, mid + 75)
+        self._draw_text(screen, "3 - Hard", self.small_font, WHITE, mid + 110)
+        self._draw_text(screen, "Q or Esc - Quit", self.small_font, GRAY, mid + 160)
 
     def render(self, screen):
         # Draw food
