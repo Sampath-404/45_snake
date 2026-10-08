@@ -7,6 +7,7 @@ from .food import Food
 WHITE = (255, 255, 255)
 GREEN = (0, 200, 0)
 RED = (220, 60, 60)
+GRAY = (180, 180, 180)
 
 class GameEngine:
     def __init__(self, width, height):
@@ -23,15 +24,26 @@ class GameEngine:
 
         self.score = 0
         self.font = pygame.font.SysFont("Arial", 30)
+        self.big_font = pygame.font.SysFont("Arial", 64, bold=True)
+        self.small_font = pygame.font.SysFont("Arial", 26)
 
         self.moves_per_second = 8
         self._frame_counter = 0
 
         self.game_over = False
-        self._game_over_logged = False
+        self.game_over_time = 0
+
+    def _end_game(self):
+        self.game_over = True
+        self.game_over_time = pygame.time.get_ticks()
 
     def handle_keydown(self, key):
-        # Direction changes are applied immediately on key press.
+        if self.game_over:
+            # Short delay so a key pressed just before dying doesn't skip the screen.
+            if pygame.time.get_ticks() - self.game_over_time > 700:
+                pygame.event.post(pygame.event.Event(pygame.QUIT))
+            return
+
         if key in (pygame.K_UP, pygame.K_w):
             self.snake.set_direction(0, -1)
         elif key in (pygame.K_DOWN, pygame.K_s):
@@ -59,17 +71,31 @@ class GameEngine:
         self.snake.move()
 
         if self.snake.collides_with_wall(self.grid_width, self.grid_height):
-            self.game_over = True
+            self._end_game()
             return
 
         if self.snake.collides_with_self():
-            self.game_over = True
+            self._end_game()
             return
 
         if self.snake.head_rect().colliderect(self.food.rect()):
             self.snake.grow()
             self.score += 1
             self.food.respawn(self.snake.body)
+
+    def _draw_text(self, screen, text, font, color, y):
+        surface = font.render(text, True, color)
+        rect = surface.get_rect(center=(self.width // 2, y))
+        screen.blit(surface, rect)
+
+    def _draw_game_over(self, screen):
+        overlay = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 180))
+        screen.blit(overlay, (0, 0))
+
+        self._draw_text(screen, "GAME OVER", self.big_font, RED, self.height // 2 - 70)
+        self._draw_text(screen, f"Final Score: {self.score}", self.font, WHITE, self.height // 2)
+        self._draw_text(screen, "Press any key to exit", self.small_font, GRAY, self.height // 2 + 60)
 
     def render(self, screen):
         # Draw food
@@ -83,7 +109,5 @@ class GameEngine:
         score_text = self.font.render(f"Score: {self.score}", True, WHITE)
         screen.blit(score_text, (10, 10))
 
-        if self.game_over and not self._game_over_logged:
-            # NOTE: no proper game-over screen yet - see Task 2 in the README.
-            print("Game over! Final score:", self.score)
-            self._game_over_logged = True
+        if self.game_over:
+            self._draw_game_over(screen)
